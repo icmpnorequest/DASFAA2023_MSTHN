@@ -15,17 +15,19 @@ from dataset import POIDataset
 from metrics import batch_performance
 from model import *
 
+# set random seed
 seed = 2022
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
 
+# clear cache
 torch.cuda.empty_cache()
 torch.backends.cudnn.benchmark = True
 torch.backends.cudnn.enabled = True
 
-
+# parse argument
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', default="NYC", help='NYC/TKY/Gowalla')
 parser.add_argument('--num_heads', type=int, default=8, help='number of heads for multi-attention')
@@ -45,7 +47,7 @@ parser.add_argument('--conv', type=str, default="sym", help='Symmetric hypergrap
 parser.add_argument('--deviceID', type=int, default=0)
 args = parser.parse_args()
 
-
+# set device gpu/cpu
 device = torch.device("cuda:{}".format(args.deviceID) if torch.cuda.is_available() else "cpu")
 
 
@@ -99,6 +101,8 @@ def main():
         model.train()
 
         train_loss = 0.0
+
+        # to save recall and ndcg results
         train_recall_array = np.zeros(shape=(len(train_dataloader), len(Ks_list)))
         train_ndcg_array = np.zeros(shape=(len(train_dataloader), len(Ks_list)))
         for idx, batch in enumerate(train_dataloader):

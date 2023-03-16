@@ -1,3 +1,9 @@
+# coding=utf-8
+"""
+@author: Yantong Lai
+@description: Dataset class for next POI recommendation, including Foursquare TKY, NYC and Gowalla
+"""
+
 import torch
 from utils import *
 from torch.utils.data import Dataset, DataLoader
@@ -45,6 +51,7 @@ class POIDataset(Dataset):
         self.HG = self.HG.to(self.device)
 
     def __len__(self):
+
         return len(self.sessions_dict)
 
     def __getitem__(self, user_idx):
@@ -57,14 +64,15 @@ class POIDataset(Dataset):
         user_seq_mask = torch.tensor(self.users_seqs_masks_dict[user_idx]).to(self.device)
         label = torch.tensor(self.labels_dict[user_idx] - self.num_users).to(self.device)
 
-        sample = {"user_idx": user_idx_tensor,
-                  "user_seq": user_seq,
-                  "user_rev_seq": user_rev_seq,
-                  "user_seq_len": user_seq_len,
-                  "user_geo_adj": user_geo_adj,
-                  "user_seq_mask": user_seq_mask,
-                  "label": label
-                  }
+        sample = {
+            "user_idx": user_idx_tensor,
+            "user_seq": user_seq,
+            "user_rev_seq": user_rev_seq,
+            "user_seq_len": user_seq_len,
+            "user_geo_adj": user_geo_adj,
+            "user_seq_mask": user_seq_mask,
+            "label": label,
+        }
 
         return sample
 

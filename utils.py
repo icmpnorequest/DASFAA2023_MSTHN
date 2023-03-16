@@ -1,3 +1,9 @@
+# coding=utf-8
+"""
+@author: Yantong Lai
+@description: Common utilization for POI recommendation
+"""
+
 import pickle
 import numpy as np
 from math import radians, cos, sin, asin, sqrt
@@ -6,6 +12,7 @@ import torch
 
 
 def get_unique_seq(sessions_list):
+    """Get unique POIs in the sequence"""
     seq_list = []
     for session in sessions_list:
         for poi in session:
@@ -18,6 +25,7 @@ def get_unique_seq(sessions_list):
 
 
 def get_unique_seqs_for_sessions(sessions_dict):
+    """Get unique seq for each session"""
     seqs_dict = {}
     seqs_lens_dict = {}
     for key, value in sessions_dict.items():
@@ -126,6 +134,7 @@ def gen_users_seqs_masks(users_seqs_dict, padding_idx):
 
 
 def haversine_distance(lon1, lat1, lon2, lat2):
+    """Haversine distance"""
     lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
 
     dlon = lon2 - lon1
@@ -138,11 +147,13 @@ def haversine_distance(lon1, lat1, lon2, lat2):
 
 
 def euclidean_distance(lon1, lat1, lon2, lat2):
+    """Euclidean distance"""
 
     return np.sqrt((lon1 - lon2) ** 2 + (lat1 - lat2) ** 2)
 
 
 def gen_geo_seqs_adjs_dict(users_seqs_dict, pois_coos_dict, max_seq_len, padding_idx, eta=1, distance_threshold=2.5, distance_type="haversine"):
+    """Generate geographical sequential adjacency dictionary"""
     geo_adjs_dict = {}
     for key, seq in users_seqs_dict.items():
         geo_adj = np.zeros(shape=(max_seq_len, max_seq_len))
@@ -171,6 +182,7 @@ def gen_geo_seqs_adjs_dict(users_seqs_dict, pois_coos_dict, max_seq_len, padding
 
 
 def create_user_poi_adj(users_seqs_dict, num_users, num_pois, padding_idx):
+    """Create user-POI interaction matrix"""
     R = sp.dok_matrix((num_users, num_pois), dtype=np.float)
     for userID, seq in users_seqs_dict.items():
         for itemID in seq:
@@ -184,6 +196,7 @@ def create_user_poi_adj(users_seqs_dict, num_users, num_pois, padding_idx):
 
 
 def gen_sparse_A(users_seqs_dict, num_users, num_pois, padding_idx):
+    """Generate sparse user-POI adjacent matrix"""
     R, R_T = create_user_poi_adj(users_seqs_dict, num_users, num_pois, padding_idx)
     A = sp.dok_matrix((num_users + num_pois, num_users + num_pois), dtype=float)
     A[:num_users, num_users:] = R
@@ -194,6 +207,7 @@ def gen_sparse_A(users_seqs_dict, num_users, num_pois, padding_idx):
 
 
 def normalized_adj(adj):
+    """Normalize adjacent matrix for GCN"""
     rowsum = np.array(adj.sum(1))
     d_inv = np.power(rowsum, -1/2).flatten()
     d_inv[np.isinf(d_inv)] = 0.
@@ -204,12 +218,14 @@ def normalized_adj(adj):
 
 
 def gen_local_graph(adj):
+    """Add self loop"""
     G = normalized_adj(adj + sp.eye(adj.shape[0]))
 
     return G
 
 
 def gen_sparse_H(sessions_dict, num_pois, num_sessions, start_poiID):
+    """Generate sparse incidence matrix for hypergraph"""
     H = np.zeros(shape=(num_pois, num_sessions))
     sess_idx = 0
     for key, sessions in sessions_dict.items():
@@ -225,6 +241,7 @@ def gen_sparse_H(sessions_dict, num_pois, num_sessions, start_poiID):
 
 
 def gen_HG_from_sparse_H(H, conv="sym"):
+    """Generate hypergraph with sparse incidence matrix"""
     n_edge = H.shape[1]
     W = sp.eye(n_edge)
 
@@ -248,6 +265,7 @@ def gen_HG_from_sparse_H(H, conv="sym"):
 
 
 def transform_csr_matrix_to_tensor(csr_matrix):
+    """Transform csr matrix to tensor"""
     coo = csr_matrix.tocoo()
     values = coo.data
     indices = np.vstack((coo.row, coo.col))

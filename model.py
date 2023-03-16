@@ -1,13 +1,19 @@
+# coding=utf-8
+"""
+@author: Yantong Lai
+@description: Local spatial-temproal enhanced GNN and global hypergraph neural network in MSTHN
+"""
+
 import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 
-class STLayer(nn.Module):
-    """Spatial-temporal enhanced graph neural network"""
+class SpatialTemporalEnhancedLayer(nn.Module):
+    """Spatial-temporal enhanced layer"""
     def __init__(self, num_users, num_pois, seq_len, emb_dim, num_heads, dropout, device):
-        super(STLayer, self).__init__()
+        super(SpatialTemporalEnhancedLayer, self).__init__()
 
         self.num_users = num_users
         self.num_pois = num_pois
@@ -17,8 +23,8 @@ class STLayer(nn.Module):
         self.device = device
 
         self.pos_embeddings = nn.Embedding(seq_len + 1, emb_dim, padding_idx=0)
-        self.FC_geo = nn.Linear(emb_dim, emb_dim, bias=True, device=device)
-        self.MultiAttn = nn.MultiheadAttention(emb_dim, num_heads, dropout, batch_first=True, device=device)
+        self.fc_geo = nn.Linear(emb_dim, emb_dim, bias=True, device=device)
+        self.multi_attn = nn.MultiheadAttention(emb_dim, num_heads, dropout, batch_first=True, device=device)
         self.weight = nn.Parameter(torch.Tensor(emb_dim, emb_dim))
 
         self.init_weights()
@@ -43,11 +49,11 @@ class STLayer(nn.Module):
 
         # generate geographical embeddings
         batch_seqs_geo_embeds = batch_users_geo_adjs.matmul(batch_seqs_embeds)
-        batch_seqs_geo_embeds = torch.relu(self.FC_geo(batch_seqs_geo_embeds))
+        batch_seqs_geo_embeds = torch.relu(self.fc_geo(batch_seqs_geo_embeds))
 
         # multi-head attention
         batch_seqs_total_embeds = batch_seqs_embeds + batch_seqs_pos_embs + batch_seqs_geo_embeds
-        batch_seqs_mha, batch_seqs_mha_weight = self.MultiAttn(batch_seqs_total_embeds, batch_seqs_total_embeds, batch_seqs_total_embeds)
+        batch_seqs_mha, batch_seqs_mha_weight = self.multi_attn(batch_seqs_total_embeds, batch_seqs_total_embeds, batch_seqs_total_embeds)
         batch_users_embeds = torch.mean(batch_seqs_mha, dim=1)
 
         nodes_embeds = nodes_embeds.clone()
@@ -60,22 +66,22 @@ class STLayer(nn.Module):
         return nodes_embeds
 
 
-class LocalGraph(nn.Module):
+class LocalSpatialTemporalGraph(nn.Module):
     """Local spatial-temporal enhanced graph neural network module"""
     def __init__(self, num_layers, num_users, num_pois, seq_len, emb_dim, num_heads, dropout, device):
-        super(LocalGraph, self).__init__()
+        super(LocalSpatialTemporalGraph, self).__init__()
 
         self.num_layers = num_layers
         self.num_users = num_users
         self.emb_dim = emb_dim
         self.dropout = dropout
         self.device = device
-        self.STLayer = STLayer(num_users, num_pois, seq_len, emb_dim, num_heads, dropout, device)
+        self.spatial_temporal_layer = SpatialTemporalEnhancedLayer(num_users, num_pois, seq_len, emb_dim, num_heads, dropout, device)
 
     def forward(self, G, nodes_embeds, batch_users_seqs, batch_users_seqs_masks, batch_users_geo_adjs, batch_users_indices):
         nodes_embedding = [nodes_embeds]
         for layer in range(self.num_layers):
-            nodes_embeds = self.STLayer(G, nodes_embeds, batch_users_seqs, batch_users_seqs_masks, batch_users_geo_adjs, batch_users_indices)
+            nodes_embeds = self.spatial_temporal_layer(G, nodes_embeds, batch_users_seqs, batch_users_seqs_masks, batch_users_geo_adjs, batch_users_indices)
             # nodes_embeds = F.dropout(nodes_embeds, self.dropout)
             nodes_embedding.append(nodes_embeds)
 
@@ -85,10 +91,10 @@ class LocalGraph(nn.Module):
         return final_nodes_embeds
 
 
-class HyGCN(nn.Module):
+class HypergraphConvolutionalNetwork(nn.Module):
     """Hypergraph convolutional network"""
     def __init__(self, emb_dim, num_layers, num_users, dropout, device):
-        super(HyGCN, self).__init__()
+        super(HypergraphConvolutionalNetwork, self).__init__()
 
         self.num_layers = num_layers
         self.num_users = num_users
@@ -129,8 +135,9 @@ class MSTHN(nn.Module):
         self.glu1 = nn.Linear(self.emb_dim, self.emb_dim)
         self.glu2 = nn.Linear(self.emb_dim, self.emb_dim, bias=False)
 
-        self.LocalGraph = LocalGraph(num_local_layer, num_users, num_pois, seq_len, emb_dim, num_heads, dropout, device)
-        self.GlobalHyG = HyGCN(emb_dim, num_global_layer, num_users, dropout, device)
+        # local graph and global hypergraph
+        self.local_graph = LocalSpatialTemporalGraph(num_local_layer, num_users, num_pois, seq_len, emb_dim, num_heads, dropout, device)
+        self.global_hyg = HypergraphConvolutionalNetwork(emb_dim, num_global_layer, num_users, dropout, device)
 
         self.init_weights()
 
@@ -162,11 +169,11 @@ class MSTHN(nn.Module):
     def forward(self, G, HG, batch_users_seqs, batch_users_seqs_masks, batch_users_geo_adjs, batch_users_indices, batch_seqs_lens, batch_users_rev_seqs):
         nodes_embeds = self.nodes_embeddings.weight
 
-        local_nodes_embs = self.LocalGraph(G, nodes_embeds, batch_users_seqs, batch_users_seqs_masks, batch_users_geo_adjs, batch_users_indices)
+        local_nodes_embs = self.local_graph(G, nodes_embeds, batch_users_seqs, batch_users_seqs_masks, batch_users_geo_adjs, batch_users_indices)
         local_batch_users_embs = local_nodes_embs[batch_users_indices]
         local_pois_embs = local_nodes_embs[self.num_users: -1, :]
 
-        global_pois_embs = self.GlobalHyG(nodes_embeds[self.num_users: -1, :], HG)
+        global_pois_embs = self.global_hyg(nodes_embeds[self.num_users: -1, :], HG)
 
         pois_embs = local_pois_embs + global_pois_embs
         fusion_nodes_embs = torch.cat([local_nodes_embs[:self.num_users], pois_embs], dim=0)
