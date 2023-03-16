@@ -1,10 +1,10 @@
 # MSTHN
-The official PyTorch implementation for Multi-View Spatial-Temporal Enhanced Hypergraph Network for Next POI Recommendation, which is accepted to DASFAA2023.
+The official PyTorch implementation for Multi-View Spatial-Temporal Enhanced Hypergraph Network for Next POI Recommendation, which is accepted to DASFAA2023 (CCF-B).
 
 ## Overview
 Multi-View Spatial-Temporal Enhanced Hypergraph Network (MSTHN) designs a local spatial-temporal enhanced graph neural network, 
-to aggregate and propagate spatial-temporal correlations in an asymmetric way, and global interactive hypergraph neural network 
-to capture complex high-order collaborative signals and mitigate check-in data sparsity issue for next POI recommendation.
+to capture important spatial-temporal correlations during aggregation and propagation, and a global interactive hypergraph neural network
+to uncover complex high-order collaborative signals and mitigate check-in data sparsity issue for next POI recommendation.
 ![](MSTHN.jpg)
 
 ## Requirements
@@ -17,8 +17,7 @@ torch==1.9.1
 - Foursquare dataset is collected by Yang et al. 2015, and could be downloaded from [link](https://sites.google.com/site/yangdingqi/home/foursquare-dataset)
 > Dingqi Yang, Daqing Zhang, Vincent W. Zheng, Zhiyong Yu. Modeling User Activity Preference by Leveraging User Spatial Temporal Characteristics in LBSNs. IEEE Trans. on Systems, Man, and Cybernetics: Systems, (TSMC), 45(1), 129-142, 2015
 - Gowalla dataset is collected by Yin et al. 2015, and could be downloaded from [link](https://www.dropbox.com/sh/qy3s8rs66nirhl9/AAClmTnFO-rR-4ecEYO-jU4ba?dl=0)
-> Yin, H., Cui, B., Chen, L., Hu, Z., Zhang, C.: Modeling location-based user rating profiles for personalized recommendation. ACM Transactions on Knowledge
-Discovery from Data (TKDD) 9(3), 1–41 (2015)
+> Yin, H., Cui, B., Chen, L., Hu, Z., Zhang, C.: Modeling location-based user rating profiles for personalized recommendation. ACM Transactions on Knowledge Discovery from Data (TKDD) 9(3), 1–41 (2015)
 
 ## Running
 ```
