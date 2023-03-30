@@ -1,5 +1,5 @@
 # MSTHN
-The official PyTorch implementation for Multi-View Spatial-Temporal Enhanced Hypergraph Network for Next POI Recommendation, which is accepted to DASFAA2023 (CCF-B).
+The official PyTorch implementation for Multi-View Spatial-Temporal Enhanced Hypergraph Network for Next POI Recommendation, which is accepted to DASFAA2023.
 
 ## Overview
 Multi-View Spatial-Temporal Enhanced Hypergraph Network (MSTHN) designs a local spatial-temporal enhanced graph neural network, 
